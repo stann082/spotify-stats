@@ -5,42 +5,80 @@ from src.scope_builder import ScopeBuilder
 
 class SpotifyService:
 
-    # Constructors
     def __init__(self, app_env):
         self.__initialize_spotify(app_env)
 
-    # region Public Methods
-    def get_playlists(self):
-        pass
+    def get_playlist_tracks(self, playlist_id):
+        playlist_tracks = []
+        items = self.__get_items(self.spotify.playlist_tracks(playlist_id), True)
+        for item in items:
+            track = item['track']
+            album_name = track['album']['name']
+            album_release_date = track['album']['release_date']
+            artist = track['artists'][0]['name']
+            song_name = track['name']
+            playlist_tracks.append(f'{artist} - {song_name}; {album_name} ({album_release_date})')
+        return playlist_tracks
+
+    def get_playlists(self, playlist_name):
+        playlists = []
+        items = self.__get_items(self.spotify.current_user_playlists(), True)
+        for item in items:
+            playlists.append(item)
+
+        if playlist_name is None:
+            return list(map(lambda p: f"{p['name']} (Total tracks: {p['tracks']['total']})", playlists))
+
+        matching_playlists = list(filter(lambda x: playlist_name.lower() in x['name'].lower(), playlists))
+        if len(matching_playlists) == 0:
+            return [f"Could not find any playlists matching {playlist_name}"]
+
+        playlist_info = ""
+        for matching_playlist in matching_playlists:
+            playlist_info += f"        Name: {matching_playlist['name']}\n"
+            playlist_info += f"          Id: {matching_playlist['id']}\n"
+            playlist_info += f"         Uri: {matching_playlist['uri']}\n"
+            playlist_info += f"Total tracks: {matching_playlist['tracks']['total']}\n\n"
+        return [playlist_info]
 
     def get_recently_played_tracks(self):
-        playlists = []
-        user_playlists = self.spotify.current_user_playlists()
-        # for items in enumerate(top_artists['items']):
-        #     track = items[1]['track']
-        #     artist = track['artists'][0]['name']
-        #     song_name = track['name']
-        #     recent_tracks.append(f'{artist} - {song_name}')
-        return playlists
+        recent_tracks = []
+        items = self.__get_items(self.spotify.current_user_recently_played())
+        for item in items:
+            track = item['track']
+            artist = track['artists'][0]['name']
+            song_name = track['name']
+            recent_tracks.append(f'{artist} - {song_name}')
+        return recent_tracks
 
     def get_top_artists(self, range='medium_term'):
-        artists = []
-        top_artists = self.spotify.current_user_top_artists(time_range=range)
-        for items in enumerate(top_artists['items']):
-            artists.append(items[1]['name'])
-        return artists
+        top_artists = []
+        items = self.__get_items(
+            self.spotify.current_user_top_artists(time_range=range))
+        for item in items:
+            top_artists.append(item['name'])
+        return top_artists
 
     def get_top_tracks(self, range='medium_term'):
-        artist_song_name = []
-        top_tracks = self.spotify.current_user_top_tracks(time_range=range)
-        for items in enumerate(top_tracks['items']):
-            item = items[1]
+        top_tracks = []
+        items = self.__get_items(
+            self.spotify.current_user_top_tracks(time_range=range))
+        for item in items:
             artist = item['artists'][0]['name']
             song_name = item['name']
-            artist_song_name.append(f'{artist} - {song_name}')
-        return artist_song_name
+            top_tracks.append(f'{artist} - {song_name}')
+        return top_tracks
 
-    # region Helper Methods
+    def __get_items(self, results, should_get_all_items=False):
+        items = results['items']
+        if not should_get_all_items:
+            return items
+
+        while results['next']:
+            results = self.spotify.next(results)
+            items.extend(results['items'])
+        return items
+
     def __initialize_spotify(self, app_env):
         scope = ScopeBuilder().build()
         self.spotify = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=app_env.client_id,

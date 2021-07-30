@@ -29,9 +29,9 @@ class ApplicationEnvironment:
         Path("log").mkdir(exist_ok=True)
 
     def __set_env_var(self, env_var):
-        sonarLoginEnvVarName = environ.get(env_var)
-        if sonarLoginEnvVarName is None:
+        env_var_value = environ.get(env_var)
+        if env_var_value is None:
             logging.error(f'{env_var} environment variable is not set...')
             return ""
 
-        return sonarLoginEnvVarName
+        return env_var_value

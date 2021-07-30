@@ -6,13 +6,11 @@ import sys
 from src.spotify_service import SpotifyService
 from src.application_environment import ApplicationEnvironment
 
-# region Helper Methods
 def __print_items(items):
     for item in items:
         print(item)
     pass
 
-# region Main Method
 def main():
     app_env = ApplicationEnvironment()
     if not app_env.env_vars_are_set():
@@ -28,6 +26,8 @@ def main():
                         help="Shows recently played tracks")
     parser.add_argument("-p", "--playlists", nargs='*',
                         help="Shows user playlists")
+    parser.add_argument("-pt", "--playlist-tracks",
+                        help="Shows playlist tracks (must provide playlist's id)")
     args = parser.parse_args()
 
     service = SpotifyService(app_env)
@@ -41,7 +41,10 @@ def main():
     elif args.recent_tracks is not None:
         __print_items(service.get_recently_played_tracks())
     elif args.playlists is not None:
-        __print_items(service.get_playlists())
+        playlist = args.playlists[0] if len(args.playlists) > 0 else None
+        __print_items(service.get_playlists(playlist))
+    elif args.playlist_tracks:
+        __print_items(service.get_playlist_tracks(args.playlist_tracks))
     else:
         print("No arguments were provided... Pass -h or --help for more information")
         sys.exit(1)
